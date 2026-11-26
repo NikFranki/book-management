@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const backendUrl = process.env.BOOK_API_URL ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: ["127.0.0.1", "100.119.76.88"],
   async rewrites() {
     return [{
       source: "/api/:path*",

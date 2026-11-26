@@ -5,9 +5,12 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/bookdb;DB_CLOSE_ON_EXIT=FALSE}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
-  jpa:
-    hibernate:
-      ddl-auto: update
+  sql:
+    init:
+      mode: always
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
 logging:
   level:
     com.example.bookmanagement: debug

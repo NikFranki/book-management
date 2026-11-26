@@ -7,9 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 @Service
 public class BookService {
@@ -30,13 +29,12 @@ public class BookService {
 
         log.debug("开始执行分页查询，page={}, size={}", page, size);
         log.info("分页查询图书，keyword={}, page={}, size={}", keyword, page, size);
-        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        var pageable = PageRequest.of(page, size);
         if (keyword == null || keyword.isBlank()) {
-            return bookRepository.findAll(pageable);
+            return new PageImpl<>(bookRepository.findPage((long) page * size, size), pageable, bookRepository.countAll());
         }
-        return bookRepository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(
-                keyword, keyword, pageable
-        );
+        return new PageImpl<>(bookRepository.searchPage(keyword, (long) page * size, size), pageable,
+                bookRepository.countSearch(keyword));
     }
 
     @Transactional(readOnly = true)

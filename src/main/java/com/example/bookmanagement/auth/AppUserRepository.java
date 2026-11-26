@@ -1,12 +1,24 @@
 package com.example.bookmanagement.auth;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.Optional;
 
-public interface AppUserRepository extends JpaRepository<AppUser, Long> {
+@Mapper
+public interface AppUserRepository {
+    @Select("SELECT id, username, password_hash, user_role AS role FROM app_users WHERE username = #{username}")
+    Optional<AppUser> findByUsername(@Param("username") String username);
 
-    Optional<AppUser> findByUsername(String username);
+    @Select("SELECT COUNT(*) > 0 FROM app_users WHERE username = #{username}")
+    boolean existsByUsername(@Param("username") String username);
 
-    boolean existsByUsername(String username);
+    @Insert("INSERT INTO app_users (username, password_hash, user_role) VALUES (#{username}, #{passwordHash}, #{role})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(AppUser user);
+
+    default AppUser save(AppUser user) { insert(user); return user; }
 }

@@ -1,12 +1,15 @@
 "use client";
 
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { api, Book, BookPage, BorrowRecord, Session } from "@/lib/api";
 
 type View = "dashboard" | "books" | "loans";
 type LoanFilter = "ALL" | BorrowRecord["status"];
 type BookDraft = Omit<Book, "id">;
 const emptyDraft: BookDraft = { title: "", author: "", isbn: "", price: 0.01, availableCopies: 1 };
+const subscribeToHydration = () => () => {};
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
 
 function localDateInput(instant: string) {
   const date = new Date(instant);
@@ -37,10 +40,18 @@ function ErrorText({ children }: { children: ReactNode }) {
   return <p className="notice error" role="alert">{children}</p>;
 }
 
+function readStoredSession(): Session | null {
+  if (typeof window === "undefined") return null;
+  const stored = window.localStorage.getItem("bookroom-session");
+  if (!stored) return null;
+  try { return JSON.parse(stored) as Session; }
+  catch { return null; }
+}
+
 export default function Home() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [ready, setReady] = useState(false);
-  const [view, setView] = useState<View>("books");
+  const [session, setSession] = useState<Session | null>(readStoredSession);
+  const ready = useSyncExternalStore(subscribeToHydration, getClientHydrationSnapshot, getServerHydrationSnapshot);
+  const [view, setView] = useState<View>(() => readStoredSession()?.roles.includes("ROLE_ADMIN") ? "dashboard" : "books");
   const [books, setBooks] = useState<BookPage | null>(null);
   const [totalBooks, setTotalBooks] = useState<number | null>(null);
   const [loans, setLoans] = useState<BorrowRecord[]>([]);
@@ -73,18 +84,6 @@ export default function Home() {
       return matchesStatus && (!query || searchableText.includes(query));
     });
   }, [isAdmin, loanFilter, loanSearch, loans]);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("bookroom-session");
-    if (stored) {
-      try {
-        const savedSession = JSON.parse(stored) as Session;
-        setSession(savedSession);
-        if (savedSession.roles.includes("ROLE_ADMIN")) setView("dashboard");
-      } catch { window.localStorage.removeItem("bookroom-session"); }
-    }
-    setReady(true);
-  }, []);
 
   const loadBooks = useCallback(async (token: string, currentPage = page, term = keyword) => {
     setBusy(true); setError("");
@@ -126,9 +125,14 @@ export default function Home() {
 
   useEffect(() => {
     if (!session) return;
-    if (view === "dashboard" && isAdmin) void loadDashboard(session.accessToken);
-    else if (view === "books") void loadBooks(session.accessToken, page, keyword);
-    else if (view === "loans") void loadLoans(session.accessToken);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      if (view === "dashboard" && isAdmin) void loadDashboard(session.accessToken);
+      else if (view === "books") void loadBooks(session.accessToken, page, keyword);
+      else if (view === "loans") void loadLoans(session.accessToken);
+    });
+    return () => { cancelled = true; };
   }, [session, view, page, keyword, isAdmin, loadBooks, loadLoans, loadDashboard]);
 
   async function login(event: FormEvent<HTMLFormElement>) {

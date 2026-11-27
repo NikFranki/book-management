@@ -29,7 +29,7 @@ The frontend runs separately from the Spring Boot API during development. Admini
 
 ## Capabilities and Constraints
 
-- Authentication uses a JWT returned by `POST /api/auth/login`.
+- Authentication uses a JWT returned by `POST /api/auth/login`..
 - Registration creates a reader account; public registration cannot assign administrator role.
 - The book API supports paginated search, CRUD, and available-copy counts.
 - Borrowing records are tied to the authenticated username; readers can see and return their own records.

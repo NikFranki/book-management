@@ -164,7 +164,7 @@ class BorrowServiceIntegrationTests {
     void readerCannotEditDueDate() {
         Book book = saveBook(1);
         BorrowResponse borrowed = borrowService.borrow(new BorrowRequest(book.getId()), "reader-a");
-        Instant originalDueAt = borrowed.dueAt();
+        Instant originalDueAt = borrowRepository.findById(borrowed.id()).orElseThrow().getDueAt();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
